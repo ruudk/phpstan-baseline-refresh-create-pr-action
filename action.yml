@@ -1,0 +1,102 @@
+name: "PHPStan Baseline Refresh"
+description: "Automatically create a PR when the PHPStan baseline can be refreshed"
+
+inputs:
+    github_token:
+        description: "GitHub token to create the PR"
+        required: true
+    baseline_path:
+        description: "Path to PHPStan baseline neon file"
+        required: true
+    phpstan_path:
+        description: "Path to PHPStan"
+        default: "vendor/bin/phpstan"
+        required: true
+    branch:
+        description: "Name of the branch to push to"
+        default: "phpstan-baseline"
+        required: true
+    target_branch:
+        description: "Name of the branch to target the PR to"
+        default: "main"
+        required: true
+    commit_name:
+        description: "Name of the author"
+        default: "GitHub Actions"
+        required: true
+    commit_email:
+        description: "Email of the author"
+        default: "actions@github.com"
+        required: true
+    commit_message:
+        description: "Commit message when PHPStan baseline changed"
+        default: "PHPStan > Update baseline"
+        required: true
+    pr_create:
+        description: "Wether or not to create the PR"
+        default: true
+        required: true
+    pr_title:
+        description: "Title of the PR"
+        default: "PHPStan > Update baseline"
+        required: true
+    pr_reviewer:
+        description: "Comma-separated list (no spaces) of people and teams that should be added as reviewer"
+        required: false
+    pr_body:
+        description: "Body of the PR"
+        required: true
+        default: |
+            This PR is automatically created to cleanup our baseline.
+
+            Since the last refresh of the baseline we have fixed {0} ignored errors.
+
+            Keep it up all! :muscle:
+
+            There are only {1} ignored errors left :sweat_smile:
+
+runs:
+    using: "composite"
+    steps:
+        -   name: PHPStan
+            shell: bash
+            run: ${{ inputs.phpstan_path }} analyse --ansi
+        -   name: Ignored errors
+            id: before-refresh
+            shell: bash
+            run: |
+                set -exu
+                echo "::set-output name=ignored-count::$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)"
+        -   name: Refresh baseline
+            if: ${{ inputs.pr_create == 1 }}
+            id: refresh-baseline
+            shell: bash
+            run: |
+                ${{ inputs.phpstan_path }} analyse --ansi --generate-baseline
+                echo "::set-output name=changed::$(git diff --quiet ${{ inputs.baseline_path }} && echo 0 || echo 1)"
+                echo "::set-output name=new-ignored-count::$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)"
+                echo "::set-output name=fixed::$(echo "${{ steps.before-refresh.outputs.ignored-count }} - " $(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc) | bc)"
+        -   name: Push baseline to branch
+            if: ${{ inputs.pr_create == 1 && steps.refresh-baseline.outputs.changed == 1 }}
+            shell: bash
+            run: |
+                git config --local user.email "${{ inputs.commit_email }}"
+                git config --local user.name "${{ inputs.commit_name }}"
+                git checkout -b ${{ inputs.branch }}
+                git add ${{ inputs.baseline_path }}
+                git commit -m "${{ inputs.commit_message }}"
+                git push --set-upstream origin ${{ inputs.branch }} --force
+        -   name: Create PR
+            uses: repo-sync/pull-request@v2.6
+            if: ${{ inputs.pr_create == 1 &&steps.refresh-baseline.outputs.changed == 1 }}
+            with:
+                source_branch: ${{ inputs.branch }}
+                destination_branch: ${{ inputs.target_branch }}
+                pr_reviewer: ${{ inputs.pr_reviewer }}
+                pr_title: ${{ inputs.pr_title }}
+                pr_body: ${{ format(inputs.pr_body, steps.refresh-baseline.outputs.fixed, steps.refresh-baseline.outputs.new-ignored-count) }}
+                pr_draft: false
+                pr_allow_empty: false
+                github_token: ${{ inputs.github_token }}
+
+
