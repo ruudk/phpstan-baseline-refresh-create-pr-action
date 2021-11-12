@@ -61,7 +61,7 @@ runs:
         -   name: PHPStan
             shell: bash
             run: |
-                echo "Running PHPStan"
+                echo "Running PHPStan ${{ inputs.pr_create }}"
                 ${{ inputs.phpstan_path }} analyse --ansi
         -   name: Ignored errors
             id: before-refresh
