@@ -72,7 +72,7 @@ runs:
                 echo "Baseline currently has $IGNORED_COUNT ignored errors"
                 echo "::set-output name=ignored-count::$IGNORED_COUNT"
         -   name: Refresh baseline
-            if: ${{ inputs.pr_create }}
+            if: ${{ inputs.pr_create == true }}
             id: refresh-baseline
             shell: bash
             run: |
@@ -88,7 +88,7 @@ runs:
                 echo "Fixed $FIXED error(s)"
                 echo "::set-output name=fixed::$FIXED"
         -   name: Push baseline to branch
-            if: ${{ inputs.pr_create && steps.refresh-baseline.outputs.changed }}
+            if: ${{ inputs.pr_create == true && steps.refresh-baseline.outputs.changed == true }}
             shell: bash
             run: |
                 set -eu
@@ -101,7 +101,7 @@ runs:
                 git push --set-upstream origin ${{ inputs.branch }} --force
         -   name: Create PR
             uses: repo-sync/pull-request@v2.6
-            if: ${{ inputs.pr_create && steps.refresh-baseline.outputs.changed }}
+            if: ${{ inputs.pr_create == true && steps.refresh-baseline.outputs.changed == true }}
             with:
                 source_branch: ${{ inputs.branch }}
                 destination_branch: ${{ inputs.target_branch }}
