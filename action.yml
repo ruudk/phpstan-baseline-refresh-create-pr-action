@@ -60,26 +60,39 @@ runs:
     steps:
         -   name: PHPStan
             shell: bash
-            run: ${{ inputs.phpstan_path }} analyse --ansi
+            run: |
+                echo "Running PHPStan"
+                ${{ inputs.phpstan_path }} analyse --ansi
         -   name: Ignored errors
             id: before-refresh
             shell: bash
             run: |
-                set -exu
-                echo "::set-output name=ignored-count::$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)"
+                set -eu
+                IGNORED_COUNT=$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)
+                echo "Baseline currently has $IGNORED_COUNT ignored errors"
+                echo "::set-output name=ignored-count::$IGNORED_COUNT"
         -   name: Refresh baseline
-            if: ${{ inputs.pr_create == 1 }}
+            if: ${{ inputs.pr_create }}
             id: refresh-baseline
             shell: bash
             run: |
+                set -eu
+                echo "Generating new baseline"
                 ${{ inputs.phpstan_path }} analyse --ansi --generate-baseline
-                echo "::set-output name=changed::$(git diff --quiet ${{ inputs.baseline_path }} && echo 0 || echo 1)"
-                echo "::set-output name=new-ignored-count::$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)"
-                echo "::set-output name=fixed::$(echo "${{ steps.before-refresh.outputs.ignored-count }} - " $(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc) | bc)"
+                CHANGED=$(git diff --quiet ${{ inputs.baseline_path }} && echo 0 || echo 1)
+                echo "::set-output name=changed::$CHANGED"
+                NEW_IGNORED_COUNT=$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)
+                echo "Baseline now has $NEW_IGNORED_COUNT ignored errors"
+                echo "::set-output name=new-ignored-count::$NEW_IGNORED_COUNT"
+                FIXED=$(echo "${{ steps.before-refresh.outputs.ignored-count }} - " $(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc) | bc)
+                echo "Fixed $FIXED error(s)"
+                echo "::set-output name=fixed::$FIXED"
         -   name: Push baseline to branch
-            if: ${{ inputs.pr_create == 1 && steps.refresh-baseline.outputs.changed == 1 }}
+            if: ${{ inputs.pr_create && steps.refresh-baseline.outputs.changed }}
             shell: bash
             run: |
+                set -eu
+                echo "Pushing baseline to branch ${{ inputs.branch }}"
                 git config --local user.email "${{ inputs.commit_email }}"
                 git config --local user.name "${{ inputs.commit_name }}"
                 git checkout -b ${{ inputs.branch }}
@@ -88,7 +101,7 @@ runs:
                 git push --set-upstream origin ${{ inputs.branch }} --force
         -   name: Create PR
             uses: repo-sync/pull-request@v2.6
-            if: ${{ inputs.pr_create == 1 &&steps.refresh-baseline.outputs.changed == 1 }}
+            if: ${{ inputs.pr_create && steps.refresh-baseline.outputs.changed }}
             with:
                 source_branch: ${{ inputs.branch }}
                 destination_branch: ${{ inputs.target_branch }}
