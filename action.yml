@@ -54,6 +54,10 @@ inputs:
             Keep it up all! :muscle:
 
             There are only {1} ignored errors left :sweat_smile:
+    pr_enable_auto_merge:
+        description: "Enable 'Auto Merge' on the created PR"
+        default: false
+        required: true
 
 runs:
     using: "composite"
@@ -111,5 +115,8 @@ runs:
                 pr_draft: false
                 pr_allow_empty: false
                 github_token: ${{ inputs.github_token }}
-
-
+        -   name: Auto merge
+            uses: alexwilson/enable-github-automerge-action@1.0.0
+            if: ${{ inputs.pr_enable_auto_merge == 1 && inputs.pr_create == 1 && steps.refresh-baseline.outputs.changed == 1 }}
+            with:
+                github-token: "${{ secrets.GITHUB_TOKEN }}"
