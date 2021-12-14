@@ -33,12 +33,10 @@ jobs:
             -   uses: ruudk/phpstan-baseline-refresh-create-pr-action@main
                 with:
                     github_token: ${{ secrets.PAT_GITHUB_TOKEN }}
-                    github_actions_token: ${{ secrets.GITHUB_TOKEN }}
                     baseline_path: phpstan-baseline.neon
                     commit_name: Rambo
                     commit_email: rambo-bot@users.noreply.github.com
                     commit_message: PHPStan > Update baseline
-                    pr_enable_auto_merge: 1
                     pr_create: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && 1 || 0 }}
                     pr_title: PHPStan > Update baseline
                     pr_reviewer: ruudk

@@ -5,9 +5,6 @@ inputs:
     github_token:
         description: "GitHub user token to create the PR"
         required: true
-    github_actions_token:
-        description: "GitHub actions token to enable auto merge"
-        required: false
     baseline_path:
         description: "Path to PHPStan baseline neon file"
         required: true
@@ -57,10 +54,6 @@ inputs:
             Keep it up all! :muscle:
 
             There are only {1} ignored errors left :sweat_smile:
-    pr_enable_auto_merge:
-        description: "Enable 'Auto Merge' on the created PR"
-        default: false
-        required: true
 
 runs:
     using: "composite"
@@ -118,8 +111,3 @@ runs:
                 pr_draft: false
                 pr_allow_empty: false
                 github_token: ${{ inputs.github_token }}
-        -   name: Auto merge
-            uses: alexwilson/enable-github-automerge-action@1.0.0
-            if: ${{ inputs.pr_enable_auto_merge == 1 && inputs.pr_create == 1 && steps.refresh-baseline.outputs.changed == 1 }}
-            with:
-                github-token: ${{ inputs.github_actions_token }}
