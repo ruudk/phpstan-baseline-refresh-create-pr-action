@@ -100,7 +100,7 @@ runs:
                 git commit -m "${{ inputs.commit_message }}"
                 git push --set-upstream origin ${{ inputs.branch }} --force
         -   name: Create PR
-            uses: repo-sync/pull-request@v2.6
+            uses: repo-sync/pull-request@v2.6.2
             if: ${{ inputs.pr_create == 1 && steps.refresh-baseline.outputs.changed == 1 }}
             with:
                 source_branch: ${{ inputs.branch }}
