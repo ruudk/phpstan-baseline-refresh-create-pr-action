@@ -12,6 +12,10 @@ inputs:
         description: "Path to PHPStan"
         default: "vendor/bin/phpstan"
         required: true
+    phpstan_additional_arguments:
+        description: "Additional arguments passed to the analyze command"
+        default: "--ansi"
+        required: false
     branch:
         description: "Name of the branch to push to"
         default: "phpstan-baseline"
@@ -62,7 +66,7 @@ runs:
             shell: bash
             run: |
                 echo "Running PHPStan"
-                ${{ inputs.phpstan_path }} analyse --ansi
+                ${{ inputs.phpstan_path }} analyze ${{ inputs.phpstan_additional_arguments }}
         -   name: Ignored errors
             id: before-refresh
             shell: bash
@@ -78,7 +82,7 @@ runs:
             run: |
                 set -eu
                 echo "Generating new baseline"
-                ${{ inputs.phpstan_path }} analyse --ansi --generate-baseline
+                ${{ inputs.phpstan_path }} analyze ${{ inputs.phpstan_additional_arguments }} --generate-baseline
                 CHANGED=$(git diff --quiet ${{ inputs.baseline_path }} && echo 0 || echo 1)
                 echo "changed=$CHANGED" >> $GITHUB_OUTPUT
                 NEW_IGNORED_COUNT=$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)
