@@ -16,6 +16,9 @@ inputs:
         description: "Additional arguments passed to the analyze command"
         default: "--ansi"
         required: false
+    add_unmatched_errors_in_baseline:
+        description: "When enabled, errors that pop up during the analyze run are ignored and added to the baseline too. This can be useful when your main branch is no longer passing because of a bad merge."
+        default: false
     branch:
         description: "Name of the branch to push to"
         default: "phpstan-baseline"
@@ -64,6 +67,7 @@ runs:
     steps:
         -   name: PHPStan
             shell: bash
+            continue-on-error: ${{ inputs.pr_create == 1 && inputs.add_unmatched_errors_in_baseline == 1 }}
             run: |
                 echo "Running PHPStan"
                 ${{ inputs.phpstan_path }} analyze ${{ inputs.phpstan_additional_arguments }}
