@@ -6,7 +6,7 @@ inputs:
         description: "GitHub user token to create the PR"
         required: true
     baseline_path:
-        description: "Path to PHPStan baseline neon file"
+        description: "Path to PHPStan baseline file (.neon or .php)"
         required: true
     phpstan_path:
         description: "Path to PHPStan"
@@ -76,7 +76,15 @@ runs:
             shell: bash
             run: |
                 set -eu
-                IGNORED_COUNT=$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)
+                if [[ "${{ inputs.baseline_path }}" == *.neon ]]; then
+                    IGNORED_COUNT=$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)
+                elif [[ "${{ inputs.baseline_path }}" == *.php ]]; then
+                    IGNORED_COUNT=$(cat ${{ inputs.baseline_path }} | grep "'count' => " | sed 's/[^0-9]*//g' | paste -sd+ - | bc)
+                else
+                    echo "Baseline is not a .neon or .php file"
+                    exit 1
+                fi
+                
                 echo "Baseline currently has $IGNORED_COUNT ignored errors"
                 echo "ignored-count=$IGNORED_COUNT" >> $GITHUB_OUTPUT
         -   name: Refresh baseline
@@ -89,10 +97,16 @@ runs:
                 ${{ inputs.phpstan_path }} analyze ${{ inputs.phpstan_additional_arguments }} --generate-baseline
                 CHANGED=$(git diff --quiet ${{ inputs.baseline_path }} && echo 0 || echo 1)
                 echo "changed=$CHANGED" >> $GITHUB_OUTPUT
-                NEW_IGNORED_COUNT=$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)
+                
+                if [[ "${{ inputs.baseline_path }}" == *.neon ]]; then
+                    NEW_IGNORED_COUNT=$(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc)
+                elif [[ "${{ inputs.baseline_path }}" == *.php ]]; then
+                    NEW_IGNORED_COUNT=$(cat ${{ inputs.baseline_path }} | grep "'count' => " | sed 's/[^0-9]*//g' | paste -sd+ - | bc)
+                fi
                 echo "Baseline now has $NEW_IGNORED_COUNT ignored errors"
                 echo "new-ignored-count=$NEW_IGNORED_COUNT" >> $GITHUB_OUTPUT
-                FIXED=$(echo "${{ steps.before-refresh.outputs.ignored-count }} - " $(cat ${{ inputs.baseline_path }} | grep 'count: ' | sed 's/[^0-9]*//g' | paste -sd+ - | bc) | bc)
+
+                FIXED=$(echo "${{ steps.before-refresh.outputs.ignored-count }} - " $NEW_IGNORED_COUNT | bc)
                 echo "Fixed $FIXED error(s)"
                 echo "fixed=$FIXED" >> $GITHUB_OUTPUT
         -   name: Push baseline to branch
