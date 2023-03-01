@@ -74,7 +74,7 @@ runs:
             continue-on-error: ${{ inputs.pr_create == 1 && inputs.add_unmatched_errors_in_baseline == 1 }}
             run: |
                 echo "Running PHPStan"
-                ${{ inputs.phpstan_path }} analyze ${{ inputs.phpstan_additional_arguments }}
+                ${{ inputs.phpstan_path }} analyze --configuration=${{ inputs.configuration_path }} ${{ inputs.phpstan_additional_arguments }}
         -   name: Ignored errors
             id: before-refresh
             shell: bash
@@ -98,7 +98,7 @@ runs:
             run: |
                 set -eu
                 echo "Generating new baseline"
-                ${{ inputs.phpstan_path }} analyze ${{ inputs.phpstan_additional_arguments }} --generate-baseline ${{ inputs.baseline_path }}
+                ${{ inputs.phpstan_path }} analyze --configuration=${{ inputs.configuration_path }} ${{ inputs.phpstan_additional_arguments }} --generate-baseline ${{ inputs.baseline_path }}
                 CHANGED=$(git diff --quiet ${{ inputs.baseline_path }} && echo 0 || echo 1)
                 echo "changed=$CHANGED" >> $GITHUB_OUTPUT
                 
