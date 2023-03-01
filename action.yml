@@ -5,6 +5,10 @@ inputs:
     github_token:
         description: "GitHub user token to create the PR"
         required: true
+    configuration_path:
+        description: "Path to PHPStan configuration file (.neon or .php)"
+        default: "phpstan.neon"
+        required: true
     baseline_path:
         description: "Path to PHPStan baseline file (.neon or .php)"
         required: true
