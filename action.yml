@@ -97,8 +97,6 @@ runs:
             shell: bash
             run: |
                 set -eu
-                echo "Clear result cache"
-                ${{ inputs.phpstan_path }} clear-result-cache --configuration=${{ inputs.configuration_path }}
                 echo "Generating new baseline"
                 ${{ inputs.phpstan_path }} analyze --configuration=${{ inputs.configuration_path }} ${{ inputs.phpstan_additional_arguments }} --generate-baseline ${{ inputs.baseline_path }}
                 CHANGED=$(git diff --quiet ${{ inputs.baseline_path }} && echo 0 || echo 1)
