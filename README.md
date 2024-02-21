@@ -4,6 +4,7 @@
 
 ```yaml
 name: 'PHPStan'
+
 on:
     # Every Wednesday we want to refresh the baseline
     schedule:
@@ -16,20 +17,20 @@ on:
     pull_request:
 
 env:
-    PHP_VERSION: 8.0
+    PHP_VERSION: '8.3'
 jobs:
     phpstan:
-        runs-on: ubuntu-20.04
+        runs-on: ubuntu-22.04
         steps:
             -   name: Checkout
-                uses: actions/checkout@v2.3.4
+                uses: actions/checkout@v4
             -   name: Setup PHP
-                uses: shivammathur/setup-php@2.12.0
+                uses: shivammathur/setup-php@2
                 with:
                     php-version: ${{ env.PHP_VERSION }}
                 env:
                     fail-fast: true
-            -   uses: ramsey/composer-install@1.3.0
+            -   uses: ramsey/composer-install@2
             -   uses: ruudk/phpstan-baseline-refresh-create-pr-action@main
                 with:
                     github_token: ${{ secrets.PAT_GITHUB_TOKEN }}

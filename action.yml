@@ -116,6 +116,8 @@ runs:
         -   name: Push baseline to branch
             if: ${{ inputs.pr_create == 1 && steps.refresh-baseline.outputs.changed == 1 }}
             shell: bash
+            env:
+                GH_TOKEN: ${{ inputs.github_token }}
             run: |
                 set -eu
                 echo "Pushing baseline to branch ${{ inputs.branch }}"
@@ -125,15 +127,6 @@ runs:
                 git add ${{ inputs.baseline_path }}
                 git commit -m "${{ inputs.commit_message }}"
                 git push --set-upstream origin ${{ inputs.branch }} --force
-        -   name: Create PR
-            uses: repo-sync/pull-request@v2.12.1
-            if: ${{ inputs.pr_create == 1 && steps.refresh-baseline.outputs.changed == 1 }}
-            with:
-                source_branch: ${{ inputs.branch }}
-                destination_branch: ${{ inputs.target_branch }}
-                pr_reviewer: ${{ inputs.pr_reviewer }}
-                pr_title: ${{ inputs.pr_title }}
-                pr_body: ${{ format(inputs.pr_body, steps.refresh-baseline.outputs.fixed, steps.refresh-baseline.outputs.new-ignored-count) }}
-                pr_draft: false
-                pr_allow_empty: false
-                github_token: ${{ inputs.github_token }}
+                cat << EOF | gh pr create --base ${{ inputs.target_branch }} --title "${{ inputs.pr_title }}" --reviewer "${{ inputs.pr_reviewer }}" --body-file -
+                ${{ format(inputs.pr_body, steps.refresh-baseline.outputs.fixed, steps.refresh-baseline.outputs.new-ignored-count) }}
+                EOF
